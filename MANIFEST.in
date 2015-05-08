@@ -1,0 +1,2 @@
+include README LICENSE
+recursive-include tracked_model *.py

@@ -1,0 +1,94 @@
+django-tracked-model
+====================
+
+**Simple django app for tracking db changes executed through orm. (Only
+tested on python3 and django-1.8.1)**
+
+Usage
+-----
+
+**Once installed (see ``Installation`` below), every change to tracked
+model will be recorded whenever ``save`` or ``delete`` is called.**
+
+To include usefull information about circumstances of the changes use
+
+::
+
+    model.save(request=request)
+
+or
+
+::
+
+    model.save(track_token=token)
+
+Same goes for ``model.delete()``, where ``request`` is just django
+``HttpRequest`` instance, and ``token`` is result of
+``tracked_model.control.create_track_token(request)`` call.
+
+This will store djagno user making changes along with ip, host, user
+agent, request path, request method, referer and request timestamp.
+
+To access model's history, call it's ``tracked_model_history`` method
+
+::
+
+    model.tracked_model_history()
+
+Model instance can be created from ``History`` instance by calling
+``materialize``
+
+::
+
+    model = SomeModel.objects.create(attr='initial')
+    model.attr = 'change 1'
+    model.save()
+    model.attr = 'change 2'
+    model.save()
+
+    model_initial_state = model.tracked_history().first().materialize()
+
+Installation
+------------
+
+0. .. code:: sh
+
+       $ pip install django-tracked-model
+
+1. Add ``tracked_model`` to ``INSTALLED_APPS`` in ``settings``.
+
+2. Synch db
+
+   .. code:: sh
+
+       $ python manage.py syncdb
+
+3. Mark model as trackable
+
+::
+
+    from django.db import models
+    from tracked_model.control import TrackedModelMixin as Tracked
+
+    class MyModel(Tracked, models.Model):
+        spam = models.IntegerField()
+        egg = models.TextField()
+
+Tests & mods
+------------
+
+If for some weird reason you want to hack around, clone repo and install
+stuff from dev-reqs.txt
+
+.. code:: sh
+
+    $ pip install -r dev-reqs.txt
+
+There is a Makefile with some handy shortcuts e.g.
+
+.. code:: sh
+
+    $ make test
+    $ make qa
+
+Poke around Makefile for details
