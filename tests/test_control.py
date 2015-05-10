@@ -1,5 +1,7 @@
 """Test for ``control`` module"""
 # pylint: disable=unexpected-keyword-arg
+from django.contrib.contenttypes.models import ContentType
+
 import pytest
 
 from tests import models
@@ -34,8 +36,9 @@ def test_tracked_model_save_and_delete_and_model_history_with_no_request():
     model.some_num = 5
     model.save()
     assert history().count() == 2
+    content_type = ContentType.objects.get_for_model(model)
     raw_history = History.objects.filter(
-        table_name=model._meta.db_table, table_id=model.pk)
+        content_type=content_type, object_id=model.pk)
     assert raw_history.count() == 2
     model.delete()
     assert raw_history.count() == 3
@@ -64,8 +67,9 @@ def test_tracked_model_save_and_delete_and_model_history_with_request(
     model.some_num = 5
     model.save(request=request)
     assert history().count() == 2
+    content_type = ContentType.objects.get_for_model(model)
     raw_history = History.objects.filter(
-        table_name=model._meta.db_table, table_id=model.pk)
+        content_type=content_type, object_id=model.pk)
     assert raw_history.count() == 2
     model.delete(request=request)
     assert raw_history.count() == 3
@@ -96,8 +100,9 @@ def test_tracked_model_save_and_delete_and_model_history_with_token(
     model.some_num = 5
     model.save(track_token=token)
     assert model.tracked_model_history().count() == 2
+    content_type = ContentType.objects.get_for_model(model)
     raw_history = History.objects.filter(
-        table_name=model._meta.db_table, table_id=model.pk)
+        content_type=content_type, object_id=model.pk)
     assert raw_history.count() == 2
     model.delete(track_token=token)
     assert raw_history.count() == 3

@@ -1,4 +1,5 @@
 """Access control tools"""
+from django.contrib.contenttypes.models import ContentType
 
 from tracked_model import serializer
 from tracked_model.defs import TrackToken, ActionType, Field
@@ -56,8 +57,7 @@ class TrackedModelMixin:
 
         if changes:
             hist = History()
-            hist.model_name = self._meta.model.__name__
-            hist.app_label = self._meta.app_label
+            hist.obj = self
             hist.table_name = self._meta.db_table
             hist.table_id = self.pk
             hist.change_log = serializer.to_json(changes)
@@ -79,8 +79,7 @@ class TrackedModelMixin:
         """Saves history of model instance deletion"""
         from tracked_model.models import History, RequestInfo
         hist = History()
-        hist.model_name = self._meta.model.__name__
-        hist.app_label = self._meta.app_label
+        hist.obj = self
         hist.table_name = self._meta.db_table
         hist.table_id = self.pk
         hist.action_type = ActionType.DELETE
@@ -126,5 +125,6 @@ class TrackedModelMixin:
     def tracked_model_history(self):
         """Returns history of a tracked object"""
         from tracked_model.models import History
+        content_type = ContentType.objects.get_for_model(self)
         return History.objects.filter(
-            table_name=self._meta.db_table, table_id=self.pk)
+            content_type=content_type, object_id=self.pk)

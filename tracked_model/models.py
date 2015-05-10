@@ -1,7 +1,8 @@
 """Models and tools for access control."""
 from django.db import models
-from django.apps import apps
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 from tracked_model import serializer
 from tracked_model.defs import REQUEST_CACHE_FIELD, ActionType, Field
@@ -44,10 +45,11 @@ class RequestInfo(models.Model):
 
 class History(models.Model):
     """Stores history of changes to ``TrackedModel``"""
-    model_name = models.TextField()
-    app_label = models.TextField()
+    content_type = models.ForeignKey(ContentType)
+    object_id = models.TextField()
+    obj = GenericForeignKey('content_type', 'object_id')
+
     table_name = models.TextField()
-    table_id = models.TextField()
     change_log = models.TextField()
     revision_author = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True)
@@ -56,25 +58,26 @@ class History(models.Model):
     action_type = models.TextField(choices=ActionType.CHOICES)
 
     def __str__(self):
-        template = '{0.model_name}/{0.revision_ts}/{0.revision_author}'
-        return template.format(self)
+        cls = self.content_type.model_class().__name__
+        rev_ts = self.revision_ts
+        action = self.get_action_type_display()
+        return '{}/{}/{}'.format(cls, rev_ts, action)
 
     class Meta:
         """History meta options"""
-        index_together = (('table_name', 'table_id'),)
         ordering = ('revision_ts',)
         get_latest_by = 'revision_ts'
 
     @property
     def _tracked_model(self):
         """Returns model tracked by this instance of ``History``"""
-        return apps.get_model(self.app_label, self.model_name)
+        return self.content_type.model_class()
 
     def get_current_object(self):
         """Returns current instance of ``TrackedModel``
         that this ``History`` record belongs to
         """
-        return self._tracked_model.objects.get(pk=self.table_id)
+        return self._tracked_model.objects.get(pk=self.object_id)
 
     def materialize(self):
         """Returns instance of ``TrackedModel`` created from
@@ -90,8 +93,7 @@ class History(models.Model):
             return obj
 
         changes = History.objects.filter(
-            model_name=self.model_name, app_label=self.app_label,
-            table_id=self.table_id)
+            content_type=self.content_type, object_id=self.object_id)
         changes = changes.filter(revision_ts__lte=self.revision_ts)
         changes = list(changes.order_by('revision_ts'))
 

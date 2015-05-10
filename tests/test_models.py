@@ -1,4 +1,6 @@
 """Test some model methods"""
+from django.contrib.contenttypes.models import ContentType
+
 import pytest
 
 from tracked_model.defs import REQUEST_CACHE_FIELD
@@ -54,6 +56,7 @@ def test_materialize():
 
     obj = BasicModel.objects.create(some_num=42, some_txt=txt1)
     obj_pk = obj.pk
+    content_type = ContentType.objects.get_for_model(obj)
     hist1 = obj.tracked_model_history().latest()
 
     obj.some_txt = txt2
@@ -67,10 +70,9 @@ def test_materialize():
     assert hist3.materialize().some_txt == txt3
     assert hist2.materialize().some_txt == txt2
     assert hist1.materialize().some_txt == txt1
-
     obj.delete()
     hist4 = History.objects.filter(
-        model_name='BasicModel', table_id=obj_pk).latest()
+        content_type=content_type, object_id=obj_pk).latest()
 
     assert hist4.materialize().some_txt == txt3
     with pytest.raises(BasicModel.DoesNotExist):
