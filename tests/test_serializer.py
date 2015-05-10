@@ -35,8 +35,8 @@ def test_dump_basic_model():
     """Test ``serializers.dump_model`` for model with only basic fields"""
     model = _basic_model()
     dumped = serializer.dump_model(model)
-    all_fields = model._meta.fields
-    serializable = [x for x in all_fields if not isinstance(x, defs.SKIP_FIELDS)]
+    all_flds = model._meta.fields
+    serializable = [x for x in all_flds if not isinstance(x, defs.SKIP_FIELDS)]
     assert len(dumped) == len(serializable)
     names = [x.name for x in serializable]
     assert set(names) == set(dumped.keys())

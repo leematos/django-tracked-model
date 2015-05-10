@@ -1,5 +1,7 @@
 """Test for ``control`` module"""
 # pylint: disable=unexpected-keyword-arg
+from unittest.mock import MagicMock
+
 from django.contrib.contenttypes.models import ContentType
 
 import pytest
@@ -8,7 +10,7 @@ from tests import models
 
 from tracked_model.defs import ActionType
 from tracked_model.models import History
-from tracked_model.control import create_track_token
+from tracked_model.control import create_track_token, TrackingFormViewMixin
 
 
 pytestmark = pytest.mark.django_db
@@ -111,3 +113,14 @@ def test_tracked_model_save_and_delete_and_model_history_with_token(
     assert not History.objects.filter(revision_author__isnull=True).exists()
 
     assert raw_history.filter(revision_author=admin_user).count() == 3
+
+
+def test_tracking_form_mixin(rf):
+    """Tests TrackingFormViewMixin"""
+    view = TrackingFormViewMixin()
+    view.request = rf.get('/')
+    view.get_success_url = MagicMock()
+    form = MagicMock()
+    view.form_valid(form)
+    assert view.get_success_url.called
+    assert form.save.called

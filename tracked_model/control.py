@@ -1,4 +1,5 @@
 """Access control tools"""
+from django.http import HttpResponseRedirect
 from django.contrib.contenttypes.models import ContentType
 
 from tracked_model import serializer
@@ -128,3 +129,17 @@ class TrackedModelMixin:
         content_type = ContentType.objects.get_for_model(self)
         return History.objects.filter(
             content_type=content_type, object_id=self.pk)
+
+
+class TrackingFormViewMixin:
+    """When mixed with django.views.generic.edit.* views
+    it will replace ``save()`` with ``save(request)`` to make tracking
+    more effective.
+    """
+    # pylint: disable=attribute-defined-outside-init
+    def form_valid(self, form):
+        """Ensures ``RequestInfo`` is saved along with change history"""
+        obj = form.save(commit=False)
+        obj.save(request=self.request)
+        self.object = obj
+        return HttpResponseRedirect(self.get_success_url())

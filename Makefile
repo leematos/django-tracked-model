@@ -43,3 +43,7 @@ test-create-db:
 
 shell:
 	@. venv/$(VENV)/bin/activate; ipython
+
+
+sdist:
+	python setup.py sdist
