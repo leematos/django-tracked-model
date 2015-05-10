@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 import tracked_model
 
@@ -9,7 +9,7 @@ setup(
     description=tracked_model.__doc__,
     author=tracked_model.__author__,
     author_email=tracked_model.__author_email__,
-    packages=['tracked_model'],
+    packages=find_packages(exclude=['tests']),
     license='MIT',
     long_description=open('README').read(),
     install_requires=['django>=1.8.1'],

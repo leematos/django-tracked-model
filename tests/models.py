@@ -9,6 +9,7 @@ class BasicModel(TrackedModelMixin, models.Model):
     some_num = models.IntegerField()
     some_txt = models.TextField()
     some_date = models.DateField(null=True)
+    some_img = models.ImageField(null=True)
 
 
 class FKModel(TrackedModelMixin, models.Model):
