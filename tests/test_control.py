@@ -22,6 +22,12 @@ def test_tracked_model_diff():
     diff = model._tracked_model_diff()
 
     assert diff is None
+    model.some_txt = 'omg'
+    diff = model._tracked_model_diff()
+    assert diff is not None
+    model.save()
+    diff = model._tracked_model_diff()
+    assert diff is None
 
 
 def test_tracked_model_save_and_delete_and_model_history_with_no_request():

@@ -109,13 +109,18 @@ class TrackedModelMixin:
         if current_state == initial_state:
             return None
 
+        print('************\n')
+        print(initial_state)
+        print('************\n')
         change_log = {}
         for field in initial_state:
+            print('\n\n')
+            print(initial_state[field])
             old_value = initial_state[field][Field.VALUE]
             new_value = current_state[field][Field.VALUE]
             if old_value == new_value:
                 continue
-            field_data = initial_state.copy()[field]
+            field_data = initial_state[field].copy()
             del field_data[Field.VALUE]
             field_data[Field.OLD] = old_value
             field_data[Field.NEW] = new_value
