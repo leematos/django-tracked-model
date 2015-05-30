@@ -133,7 +133,8 @@ class TrackedModelMixin:
 
 class TrackingFormViewMixin:
     """When mixed with django.views.generic.edit.* views
-    it will replace ``save()`` with ``save(request)`` to make tracking
+    it will replace ``save()`` with ``save(request=request)``
+    and ``delete()`` with ``delete(request=request)`` to make tracking
     more effective.
     """
     # pylint: disable=attribute-defined-outside-init
@@ -142,4 +143,10 @@ class TrackingFormViewMixin:
         obj = form.save(commit=False)
         obj.save(request=self.request)
         self.object = obj
+        return HttpResponseRedirect(self.get_success_url())
+
+    def delete(self, request, *args, **kwargs):
+        """Ensures ``RequestInfo`` is saved on object deletion"""
+        self.object = self.get_object()
+        self.object.delete(request=request)
         return HttpResponseRedirect(self.get_success_url())

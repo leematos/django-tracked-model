@@ -121,8 +121,8 @@ def test_tracked_model_save_and_delete_and_model_history_with_token(
     assert raw_history.filter(revision_author=admin_user).count() == 3
 
 
-def test_tracking_form_mixin(rf):
-    """Tests TrackingFormViewMixin"""
+def test_tracking_form_mixin_save(rf):
+    """Tests TrackingFormViewMixin.form_valid"""
     view = TrackingFormViewMixin()
     view.request = rf.get('/')
     view.get_success_url = MagicMock()
@@ -130,3 +130,20 @@ def test_tracking_form_mixin(rf):
     view.form_valid(form)
     assert view.get_success_url.called
     assert form.save.called
+    
+
+def test_tracking_form_mixin_delete(rf):
+    """Tests TrackingFormViewMixin.delete"""
+    view = TrackingFormViewMixin()
+    request = rf.get('/')
+    request.user = MagicMock(is_authenticated=lambda: False)
+    obj = models.BasicModel.objects.create(some_num=3, some_txt='lol')
+    obj_pk = obj.pk
+    content_type = ContentType.objects.get_for_model(obj)
+    raw_history = History.objects.filter(
+        content_type=content_type, object_id=obj_pk)
+    assert  raw_history.count() == 1
+    view.get_object = lambda: obj
+    view.get_success_url = MagicMock()
+    view.delete(request)
+    assert raw_history.count() == 2
