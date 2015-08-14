@@ -2,21 +2,22 @@ django-tracked-model
 ================
 
 
-**Simple django app for tracking db changes executed through orm. (Only tested on python3 and django-1.8.1)**
+**Simple django app for tracking db changes executed through orm. (Only tested on python3.4 and django-1.8.1)**
 
 
-## Usage
+# Usage
+
+## Basic usage
 
 **Once installed (see `Installation` below), every change to tracked model will be recorded whenever ``save`` or ``delete`` is called.**
 
-To include usefull information about circumstances of the changes use
+
+## Advanced options
+
+Normally only model state changes are recorded, to include usefull information about circumstances of the changes use one of
 
 
     model.save(request=request)
-
-
-or
-
     model.save(track_token=token)
 
 
@@ -28,23 +29,29 @@ This will store djagno user making changes along with ip, host, user agent, requ
 To access model's history, call it's ``tracked_model_history`` method
 
 
-    model.tracked_model_history()
+    >>> history = model.tracked_model_history()
+    >>> history
+    >>> [<History: MyModel/2015-05-10 10:23:11.123512+00:00/Created>,
+         <History: MyModel/2015-05-10 11:01:39.312233+00:00/Updated>,
+         <History: MyModel/2015-05-10 11:05:05.123534+00:00/Updated>]
 
 
-Model instance can be created from ``History`` instance by calling ``materialize``
+``History`` object contains timestamp and snapshot of changes made to an object, if ``save`` or ``delete`` was called with request provided, it will also contain author of changes and some connection meta data.
+
+Each snapshot can be used to recreate object to historical state with ``materialize`` method
+
+    >>> hist_create = history.first()
+    >>> model_at_creation = hist_create.materialize()
+
+To rollback object to this state simply save it
+
+    >>> model_at_creation.save()
+
+All the changes are now discarded and model state is the same as of creation.
 
 
-    model = SomeModel.objects.create(attr='initial')
-    model.attr = 'change 1'
-    model.save()
-    model.attr = 'change 2'
-    model.save()
 
-    model_initial_state = model.tracked_history().first().materialize()
-
-
-
-## Installation
+# Installation
 
 0. 
 
@@ -60,9 +67,8 @@ Model instance can be created from ``History`` instance by calling ``materialize
 2. Synch db
 
 
-
     ```sh
-    $ python manage.py syncdb
+    $ python manage.py migrate tracked_model
     ```
 
 
@@ -79,8 +85,12 @@ class MyModel(Tracked, models.Model):
 ```
 
 
+# TODO
 
-## Tests & mods
+Restoring objects with ManyToMany is not yet tested and probably won't work.
+
+
+# Tests & mods
 
 If for some weird reason you want to hack around, clone repo and install stuff from dev-reqs.txt
 

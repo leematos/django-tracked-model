@@ -1,4 +1,6 @@
 """Access control tools"""
+from django.http import HttpResponseRedirect
+from django.contrib.contenttypes.models import ContentType
 
 from tracked_model import serializer
 from tracked_model.defs import TrackToken, ActionType, Field
@@ -56,8 +58,7 @@ class TrackedModelMixin:
 
         if changes:
             hist = History()
-            hist.model_name = self._meta.model.__name__
-            hist.app_label = self._meta.app_label
+            hist.obj = self
             hist.table_name = self._meta.db_table
             hist.table_id = self.pk
             hist.change_log = serializer.to_json(changes)
@@ -79,8 +80,7 @@ class TrackedModelMixin:
         """Saves history of model instance deletion"""
         from tracked_model.models import History, RequestInfo
         hist = History()
-        hist.model_name = self._meta.model.__name__
-        hist.app_label = self._meta.app_label
+        hist.obj = self
         hist.table_name = self._meta.db_table
         hist.table_id = self.pk
         hist.action_type = ActionType.DELETE
@@ -115,7 +115,7 @@ class TrackedModelMixin:
             new_value = current_state[field][Field.VALUE]
             if old_value == new_value:
                 continue
-            field_data = initial_state.copy()[field]
+            field_data = initial_state[field].copy()
             del field_data[Field.VALUE]
             field_data[Field.OLD] = old_value
             field_data[Field.NEW] = new_value
@@ -126,5 +126,27 @@ class TrackedModelMixin:
     def tracked_model_history(self):
         """Returns history of a tracked object"""
         from tracked_model.models import History
+        content_type = ContentType.objects.get_for_model(self)
         return History.objects.filter(
-            table_name=self._meta.db_table, table_id=self.pk)
+            content_type=content_type, object_id=self.pk)
+
+
+class TrackingFormViewMixin:
+    """When mixed with django.views.generic.edit.* views
+    it will replace ``save()`` with ``save(request=request)``
+    and ``delete()`` with ``delete(request=request)`` to make tracking
+    more effective.
+    """
+    # pylint: disable=attribute-defined-outside-init
+    def form_valid(self, form):
+        """Ensures ``RequestInfo`` is saved along with change history"""
+        obj = form.save(commit=False)
+        obj.save(request=self.request)
+        self.object = obj
+        return HttpResponseRedirect(self.get_success_url())
+
+    def delete(self, request, *args, **kwargs):
+        """Ensures ``RequestInfo`` is saved on object deletion"""
+        self.object = self.get_object()
+        self.object.delete(request=request)
+        return HttpResponseRedirect(self.get_success_url())

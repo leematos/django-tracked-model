@@ -3,7 +3,7 @@ import json
 
 from django.core.serializers.json import DjangoJSONEncoder
 
-from tracked_model.defs import RELATED_FIELDS, FieldType, Field
+from tracked_model.defs import RELATED_FIELDS, SKIP_FIELDS, FieldType, Field
 
 
 def _basic_field_data(field, obj):
@@ -69,7 +69,9 @@ def dump_model(obj):
     """
     data = {}
     for field in obj._meta.fields:
-        if isinstance(field, RELATED_FIELDS):
+        if isinstance(field, SKIP_FIELDS):
+            continue
+        elif isinstance(field, RELATED_FIELDS):
             field_data = _related_field_data(field, obj)
         else:
             field_data = _basic_field_data(field, obj)

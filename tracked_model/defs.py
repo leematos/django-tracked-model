@@ -3,9 +3,11 @@ from collections import namedtuple
 
 from django.utils.translation import ugettext_lazy as _
 from django.db.models.fields.related import OneToOneField, ForeignKey
+from django.db.models.fields.files import FileField, ImageField
 
 
 RELATED_FIELDS = (OneToOneField, ForeignKey)
+SKIP_FIELDS = (FileField, ImageField)
 
 REQUEST_CACHE_FIELD = '_tracked_model_request_info'
 
