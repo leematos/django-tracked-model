@@ -147,6 +147,7 @@ class TrackingFormViewMixin:
 
     def delete(self, request, *args, **kwargs):
         """Ensures ``RequestInfo`` is saved on object deletion"""
+        # pylint: disable=unused-argument
         self.object = self.get_object()
         self.object.delete(request=request)
         return HttpResponseRedirect(self.get_success_url())

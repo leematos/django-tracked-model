@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 
 import tracked_model
 
+
 setup(
     name='django-tracked-model',
     version=tracked_model.__version__,

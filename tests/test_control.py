@@ -130,7 +130,7 @@ def test_tracking_form_mixin_save(rf):
     view.form_valid(form)
     assert view.get_success_url.called
     assert form.save.called
-    
+
 
 def test_tracking_form_mixin_delete(rf):
     """Tests TrackingFormViewMixin.delete"""
@@ -142,7 +142,7 @@ def test_tracking_form_mixin_delete(rf):
     content_type = ContentType.objects.get_for_model(obj)
     raw_history = History.objects.filter(
         content_type=content_type, object_id=obj_pk)
-    assert  raw_history.count() == 1
+    assert raw_history.count() == 1
     view.get_object = lambda: obj
     view.get_success_url = MagicMock()
     view.delete(request)

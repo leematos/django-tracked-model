@@ -1,5 +1,4 @@
 """Track changes to django models"""
-from tracked_model.control import TrackingFormViewMixin as TrackedView
 
 
 __version__ = '0.2.0'
