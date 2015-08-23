@@ -1,5 +1,5 @@
 """Test for ``control`` module"""
-# pylint: disable=unexpected-keyword-arg
+# pylint: disable=unexpected-keyword-arg, unused-import
 from unittest.mock import MagicMock
 
 from django.contrib.contenttypes.models import ContentType
@@ -11,6 +11,7 @@ from tests import models
 from tracked_model.defs import ActionType
 from tracked_model.models import History
 from tracked_model.control import create_track_token, TrackingFormViewMixin
+from tracked_model import shortcuts
 
 
 pytestmark = pytest.mark.django_db
