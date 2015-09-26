@@ -91,7 +91,11 @@ def restore_model(cls, data):
     """
     obj = cls()
     for field in data:
-        setattr(obj, field, data[field][Field.VALUE])
+        if data[field][Field.TYPE] == Field.REL:
+            attr = '{}_id'.format(field)
+        else:
+            attr = field
+        setattr(obj, attr, data[field][Field.VALUE])
 
     return obj
 

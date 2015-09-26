@@ -6,7 +6,7 @@ import pytest
 from tracked_model.defs import REQUEST_CACHE_FIELD
 from tracked_model.models import RequestInfo, History
 
-from tests.models import BasicModel
+from tests.models import BasicModel, FKModel
 
 
 pytestmark = pytest.mark.django_db
@@ -82,3 +82,10 @@ def test_materialize():
     hist1.materialize().save()
     assert BasicModel.objects.count() == 1
     assert BasicModel.objects.first().some_txt == txt1
+
+    obj = BasicModel.objects.create(some_num=42, some_txt=txt1)
+    robj = FKModel.objects.create(some_ip='127.0.0.1', basic=obj)
+    rhist = robj.tracked_model_history().latest()
+    hobj = rhist.materialize()
+    assert hobj.some_ip == robj.some_ip
+    assert hobj.basic == robj.basic
