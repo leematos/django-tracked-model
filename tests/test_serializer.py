@@ -1,9 +1,10 @@
 """Test for ``serializer`` module"""
+# pylint: disable=import-error
 import json
 
 import pytest
 
-from tests import models
+from testapp import models
 
 from tracked_model import serializer, defs
 

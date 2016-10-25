@@ -113,9 +113,6 @@ logging-modules=logging
 
 [BASIC]
 
-# Required attributes for module, separated by a comma
-required-attributes=
-
 # List of builtins function names that should not be used, separated by a comma
 bad-functions=map,filter
 
@@ -333,10 +330,10 @@ max-branches=12
 max-statements=50
 
 # Maximum number of parents for a class (see R0901).
-max-parents=12
+max-parents=13
 
 # Maximum number of attributes for a class (see R0902).
-max-attributes=7
+max-attributes=9
 
 # Minimum number of public methods for a class (see R0903).
 min-public-methods=0
@@ -346,10 +343,6 @@ max-public-methods=20
 
 
 [CLASSES]
-
-# List of interface methods to ignore, separated by a comma. This is used for
-# instance to not check methods defines in Zope's Interface base class.
-ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
 
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,__new__,setUp

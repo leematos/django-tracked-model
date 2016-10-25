@@ -1,6 +1,9 @@
+.cache/
 venv/
 dist/
+build/
 __pycache__/
+*.egg-info/
 *.swp
 *.pyc
 .coverage

@@ -1,4 +1,5 @@
 """Test some model methods"""
+# pylint: disable=import-error
 from django.contrib.contenttypes.models import ContentType
 
 import pytest
@@ -6,7 +7,7 @@ import pytest
 from tracked_model.defs import REQUEST_CACHE_FIELD
 from tracked_model.models import RequestInfo, History
 
-from tests.models import BasicModel, FKModel
+from testapp.models import BasicModel, FKModel
 
 
 pytestmark = pytest.mark.django_db
@@ -89,3 +90,14 @@ def test_materialize():
     hobj = rhist.materialize()
     assert hobj.some_ip == robj.some_ip
     assert hobj.basic == robj.basic
+
+
+def test_history_context():
+    """Test that request is added for duration of ``context`` and removed
+    on exit.
+    """
+    request = 'this would normally be django HttpRequest object'
+    assert not getattr(History()._context, 'request', None)
+    with History.context(request):
+        assert getattr(History()._context, 'request', None) == request
+    assert not getattr(History()._context, 'request', None)

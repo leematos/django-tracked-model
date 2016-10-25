@@ -1,11 +1,14 @@
 """Models and tools for access control."""
+import threading
+from contextlib import contextmanager
+
 from django.db import models
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 
-from tracked_model import serializer
-from tracked_model.defs import REQUEST_CACHE_FIELD, ActionType, Field
+from . import serializer
+from .defs import REQUEST_CACHE_FIELD, ActionType, Field
 
 
 class RequestInfo(models.Model):
@@ -45,6 +48,8 @@ class RequestInfo(models.Model):
 
 class History(models.Model):
     """Stores history of changes to ``TrackedModel``"""
+    _context = threading.local()
+
     content_type = models.ForeignKey(ContentType)
     object_id = models.TextField()
     obj = GenericForeignKey('content_type', 'object_id')
@@ -72,6 +77,25 @@ class History(models.Model):
     def _tracked_model(self):
         """Returns model tracked by this instance of ``History``"""
         return self.content_type.model_class()
+
+    def set_request_info(self, token=None):
+        """Sets request info to current instance.
+
+        If executed within ``context`` then _context.request is used
+        otherwise token is used (if available).
+        """
+        # Somehow pylint doesn't see the *_id for django fields
+        # pylint: disable=attribute-defined-outside-init
+        try:
+            request = self._context.request
+            if request.user.is_authenticated():
+                self.revision_author = request.user
+            req_info = RequestInfo.create_or_get_from_request(request)
+            self.revision_request = req_info
+        except AttributeError:
+            if token:
+                self.revision_author_id = token.user_pk
+                self.revision_request_id = token.request_pk
 
     def get_current_object(self):
         """Returns current instance of ``TrackedModel``
@@ -108,3 +132,17 @@ class History(models.Model):
                 setattr(obj, field, next_val)
 
         return obj
+
+    @classmethod
+    @contextmanager
+    def context(cls, request):
+        """Add ``request`` to context and removes it on exit"""
+        setattr(cls._context, 'request', request)
+        yield
+        delattr(cls._context, 'request')
+
+    @classmethod
+    def for_model(cls, model):
+        """Returns history for ``model``"""
+        content_type = ContentType.objects.get_for_model(model)
+        return cls.objects.filter(content_type=content_type)

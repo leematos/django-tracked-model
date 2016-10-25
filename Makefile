@@ -1,4 +1,4 @@
-.PHONY: shell test-create-db test todo qa pylint-report pylint pep8 clean
+.PHONY: shell test-create-db test todo qa pylint-report pylint pep8 clean readme
 
 
 PROJ=tracked_model
@@ -14,7 +14,7 @@ clean:
 
 
 pep8:
-	@pep8 --exclude=migrations $(PROJ) $(TEST_DIR)
+	@pep8 --exclude=migrations,settings.py $(TEST_DIR) $(PROJ)
 
 
 pylint:
@@ -36,6 +36,9 @@ todo:
 test:
 	@py.test $(PYTEST_OPTS) $(PROJ) $(TEST_DIR)
 
+test-no-errors:
+	@py.test -vv --maxfail=1 --pdb $(PYTEST_OPTS) $(PROJ) $(TEST_DIR)
+
 
 test-create-db:
 	@py.test --create-db $(PYTEST_OPTS) $(PROJ) $(TEST_DIR)
@@ -47,3 +50,7 @@ shell:
 
 sdist:
 	python setup.py sdist
+
+
+readme:
+	pandoc --from=markdown --to=rst --output=README README.md

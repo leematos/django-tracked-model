@@ -2,7 +2,7 @@ django-tracked-model
 ================
 
 
-**Simple django app for tracking db changes executed through orm. (Only tested on python3.4 and django-1.8.1)**
+**Simple django app for tracking db changes executed through orm. (Only tested on python3.4 and django-1.10.1)**
 
 
 # Usage
@@ -14,16 +14,15 @@ django-tracked-model
 
 ## Advanced options
 
-Normally only model state changes are recorded, to include usefull information about circumstances of the changes use one of
+If model uses ``TrackedModelMixin`` changes will always be saved if made with ``save`` or ``delete``.
 
+Additionally to changes, some meta information can also be saved (user making changes, IP etc). To enable this behaviour ``save`` or ``delete`` have to be called within ``History.context``. This can be done adding ``tracked_model.middleware.TrackedModelMiddleware`` to ``settings.MIDDLEWARE`` or manually:
 
-    model.save(request=request)
-    model.save(track_token=token)
+    >>> with History.context(request):
+    >>>     some_obj.save()
 
-
-Same goes for `model.delete()`, where ``request`` is just django ``HttpRequest`` instance, and ``token`` is result of ``tracked_model.control.create_track_token(request)`` call.
-
-This will store djagno user making changes along with ip, host, user agent, request path, request method, referer and request timestamp.
+Also ``track_token`` kwarg can be added to ``save`` or ``delete`` if request is not available (for example inside celery task).
+It should contain result of ``create_track_token(request)``.
 
 
 To access model's history, call it's ``tracked_model_history`` method
@@ -36,9 +35,10 @@ To access model's history, call it's ``tracked_model_history`` method
          <History: MyModel/2015-05-10 11:05:05.123534+00:00/Updated>]
 
 
-``History`` object contains timestamp and snapshot of changes made to an object, if ``save`` or ``delete`` was called with request provided, it will also contain author of changes and some connection meta data.
+``History`` object contains timestamp and snapshot of changes made to an object, if ``save`` or ``delete`` was called within request context, it will also contain author of changes and some connection meta data.
 
-Each snapshot can be used to recreate object to historical state with ``materialize`` method
+
+Each snapshot can be used to recreate object from historical state with ``materialize`` method
 
     >>> hist_create = history.first()
     >>> model_at_creation = hist_create.materialize()
@@ -64,7 +64,10 @@ All the changes are now discarded and model state is the same as of creation.
 1. Add ``tracked_model`` to ``INSTALLED_APPS`` in ``settings``.
 
 
-2. Synch db
+2. Add ``tracked_model.middleware.TrackedModelMiddleware`` to ``MIDDLEWARE`` in ``settings``.
+
+
+3. Synch db
 
 
     ```sh
@@ -72,7 +75,7 @@ All the changes are now discarded and model state is the same as of creation.
     ```
 
 
-3. Mark model as trackable
+4. Mark model as trackable
 
 
 ```

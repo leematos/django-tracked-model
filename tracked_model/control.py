@@ -1,9 +1,6 @@
 """Access control tools"""
-from django.http import HttpResponseRedirect
-from django.contrib.contenttypes.models import ContentType
-
-from tracked_model import serializer
-from tracked_model.defs import TrackToken, ActionType, Field
+from . import serializer
+from .defs import TrackToken, ActionType, Field
 
 
 def create_track_token(request):
@@ -26,11 +23,35 @@ def create_track_token(request):
 class TrackedModelMixin:
     """Adds change-tracking functionality to models.
 
+    Changes executed through ``save`` or ``delete`` will be saved to
+    the database (``History`` model).
 
-    Makes ``save`` method accept ``request`` or ``track_token`` keywords.
-    If one of them is used, changes will be stored to database.
+    If request info is available it will also be saved (``RequestInfo`` model)
 
-    Changes can be then accessed through model's
+    Request info is available if ``save`` or ``delete`` are executed
+    within ``History.context`` or if ``track_token`` keyword is
+    provided to ``save`` or ``delete``.
+
+    All views are executed within ``History.context`` if
+    ``TrackedTokenMiddleware`` is active, otherwise one can
+    manually call it:
+
+        with History.context(request):
+            some_model.save()
+
+    If ``save`` or ``delete`` cannot be executed within request context
+    e.g they are called by async task (e.g celery), ``track_token`` obtained
+    by call to ``create_track_token`` can be passed as a keyword, e.g.
+
+        token = create_track_token(request)
+        some_task.delay(track_token=token)
+
+        # inside ``some_task``:
+
+        some_model.save(track_token=track_token)
+
+
+    Changes to the model instance can be then accessed through model's
     ``tracked_model_history`` method.
     """
     def __init__(self, *args, **kwargs):
@@ -38,10 +59,8 @@ class TrackedModelMixin:
         self._tracked_model_initial_state = serializer.dump_model(self)
 
     def save(self, *args, **kwargs):
-        """Saves changes made on model instance if ``request`` or
-        ``track_token`` keyword are provided.
-        """
-        from tracked_model.models import History, RequestInfo
+        """Saves history of changes, see class docstring for more details"""
+        from tracked_model.models import History
         if self.pk:
             action = ActionType.UPDATE
             changes = None
@@ -49,7 +68,6 @@ class TrackedModelMixin:
             action = ActionType.CREATE
             changes = serializer.dump_model(self)
 
-        request = kwargs.pop('request', None)
         track_token = kwargs.pop('track_token', None)
 
         super().save(*args, **kwargs)
@@ -63,22 +81,14 @@ class TrackedModelMixin:
             hist.table_id = self.pk
             hist.change_log = serializer.to_json(changes)
             hist.action_type = action
-            if request:
-                if request.user.is_authenticated():
-                    hist.revision_author = request.user
-                req_info = RequestInfo.create_or_get_from_request(request)
-                hist.revision_request = req_info
-            elif track_token:
-                hist.revision_author_id = track_token.user_pk
-                hist.revision_request_id = track_token.request_pk
-
+            hist.set_request_info(track_token)
             hist.save()
 
         self._tracked_model_initial_state = serializer.dump_model(self)
 
     def delete(self, *args, **kwargs):
-        """Saves history of model instance deletion"""
-        from tracked_model.models import History, RequestInfo
+        """Saves info about deletion, see class docstring for more details"""
+        from tracked_model.models import History
         hist = History()
         hist.obj = self
         hist.table_name = self._meta.db_table
@@ -86,17 +96,8 @@ class TrackedModelMixin:
         hist.action_type = ActionType.DELETE
         state = serializer.dump_model(self)
         hist.change_log = serializer.to_json(state)
-        request = kwargs.pop('request', None)
         track_token = kwargs.pop('track_token', None)
-        if request:
-            if request.user.is_authenticated():
-                hist.revision_author = request.user
-            req_info = RequestInfo.create_or_get_from_request(request)
-            hist.revision_request = req_info
-        elif track_token:
-            hist.revision_author_id = track_token.user_pk
-            hist.revision_request_id = track_token.request_pk
-
+        hist.set_request_info(track_token)
         hist.save()
         super().delete(*args, **kwargs)
 
@@ -126,28 +127,4 @@ class TrackedModelMixin:
     def tracked_model_history(self):
         """Returns history of a tracked object"""
         from tracked_model.models import History
-        content_type = ContentType.objects.get_for_model(self)
-        return History.objects.filter(
-            content_type=content_type, object_id=self.pk)
-
-
-class TrackingFormViewMixin:
-    """When mixed with django.views.generic.edit.* views
-    it will replace ``save()`` with ``save(request=request)``
-    and ``delete()`` with ``delete(request=request)`` to make tracking
-    more effective.
-    """
-    # pylint: disable=attribute-defined-outside-init
-    def form_valid(self, form):
-        """Ensures ``RequestInfo`` is saved along with change history"""
-        obj = form.save(commit=False)
-        obj.save(request=self.request)
-        self.object = obj
-        return HttpResponseRedirect(self.get_success_url())
-
-    def delete(self, request, *args, **kwargs):
-        """Ensures ``RequestInfo`` is saved on object deletion"""
-        # pylint: disable=unused-argument
-        self.object = self.get_object()
-        self.object.delete(request=request)
-        return HttpResponseRedirect(self.get_success_url())
+        return History.for_model(self).filter(object_id=self.pk)
